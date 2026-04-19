@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   />
-  <title>Spear Line v10.1</title>
+  <title>Spear Line v10</title>
   <style>
     :root {
       --bg0: #081109;
@@ -481,6 +481,7 @@
               placeholder="Your name"
               autocomplete="nickname"
               spellcheck="false"
+              disabled
             />
           </div>
 
@@ -499,7 +500,7 @@
   
   <script>
     (() => {
-      const STORAGE_KEY = "spearLineBestV12";
+      const STORAGE_KEY = "spearLineBestV11";
       const PLAYER_NAME_KEY = "spearLinePlayerName";
       const W = 360;
       const H = 640;
@@ -762,6 +763,15 @@
         skipBtn.disabled = isBusy;
       }
 
+      function setGameOverFormEnabled(isEnabled) {
+        nameInput.disabled = !isEnabled;
+        saveScoreBtn.disabled = !isEnabled || leaderboardBusy;
+        skipBtn.disabled = !isEnabled || leaderboardBusy;
+        if (!isEnabled) {
+          nameInput.blur();
+        }
+      }
+
       function renderLeaderboard(scores) {
         if (!Array.isArray(scores) || scores.length === 0) {
           leaderboardList.innerHTML = '<li class="leaderboardEmpty">No scores yet. Be the first.</li>';
@@ -843,6 +853,7 @@
 
       function continueAfterGameOver() {
         if (leaderboardBusy) return;
+        nameInput.blur();
         startGame();
       }
 
@@ -909,10 +920,14 @@
         setLeaderboardStatus("Loading leaderboard…");
         leaderboardList.innerHTML = "";
         setLeaderboardBusy(false);
+        setGameOverFormEnabled(false);
         syncHud();
       }
 
       function startGame() {
+        if (document.activeElement && typeof document.activeElement.blur === "function") {
+          document.activeElement.blur();
+        }
         chooseOperation();
         resetRun();
         state = "playing";
@@ -941,6 +956,7 @@
         syncHud();
         showCall("Line Broken", 1.2);
         gameOverOverlay.classList.remove("hidden");
+        setGameOverFormEnabled(true);
         hintText.textContent = "Save score or skip to continue";
         refreshLeaderboard();
         vibrate([30, 20, 30]);
@@ -1173,15 +1189,15 @@
 
       function spearBoxes(ob) {
         // Segmented hitbox tuned to the drawn spear shape.
-        // Tail/wake is trimmed a bit further. Core body and lower tip stay dangerous.
+        // The old single box was too wide at the upper tail and too short at the lower tip.
         if (ob.kind === "heavy") {
           return [
             {
-              // upper tail / wake: lighter and shorter than before
-              x: ob.x - ob.w * 0.13,
-              y: ob.y - ob.h * 0.31,
-              w: ob.w * 0.26,
-              h: ob.h * 0.16
+              // upper tail / wake: much less punishing now
+              x: ob.x - ob.w * 0.15,
+              y: ob.y - ob.h * 0.34,
+              w: ob.w * 0.30,
+              h: ob.h * 0.19
             },
             {
               // core body
@@ -1202,11 +1218,11 @@
 
         return [
           {
-            // upper tail / wake: lighter and shorter than before
-            x: ob.x - ob.w * 0.11,
-            y: ob.y - ob.h * 0.31,
-            w: ob.w * 0.22,
-            h: ob.h * 0.15
+            // upper tail / wake: much less punishing now
+            x: ob.x - ob.w * 0.13,
+            y: ob.y - ob.h * 0.34,
+            w: ob.w * 0.26,
+            h: ob.h * 0.18
           },
           {
             // core body
@@ -1225,10 +1241,6 @@
         ];
       }
 
-      function spearTipY(ob) {
-        return ob.y + ob.h * 0.45;
-      }
-
       function hit(a, b) {
         return a.x < b.x + b.w &&
                a.x + a.w > b.x &&
@@ -1238,26 +1250,9 @@
 
       function hitSpear(a, ob) {
         const boxes = spearBoxes(ob);
-        const wakeOnlyNow = spearTipY(ob) > a.y + a.h * 0.55;
-
-        for (let i = 0; i < boxes.length; i += 1) {
-          // After the spear head passes, the tail still matters,
-          // but only on a deeper overlap instead of any light brush.
-          if (i === 0 && wakeOnlyNow) {
-            const tail = boxes[i];
-            const reducedTail = {
-              x: tail.x + tail.w * 0.20,
-              y: tail.y + tail.h * 0.18,
-              w: tail.w * 0.60,
-              h: tail.h * 0.58
-            };
-            if (hit(a, reducedTail)) return true;
-            continue;
-          }
-
-          if (hit(a, boxes[i])) return true;
+        for (const box of boxes) {
+          if (hit(a, box)) return true;
         }
-
         return false;
       }
 
