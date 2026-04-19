@@ -510,7 +510,7 @@
   
   <script>
     (() => {
-      const STORAGE_KEY = "spearLineBestV12";
+      const STORAGE_KEY = "spearLineBestV12a";
       const PLAYER_NAME_KEY = "spearLinePlayerName";
       const LEADERBOARD_VERSION = "season-2";
       const W = 360;
@@ -1005,7 +1005,19 @@
         vibrate(10);
       }
 
+      function shouldAllowNativeInteraction(target) {
+        return Boolean(
+          target &&
+          target.closest &&
+          target.closest(".leaderboardPanel, .leaderboardList, .nameInput, .actionBtn")
+        );
+      }
+
       function normalizePress(event) {
+        if (shouldAllowNativeInteraction(event.target)) {
+          return;
+        }
+
         if (event.cancelable) event.preventDefault();
         if (event.type === "mousedown" && "ontouchstart" in window) return;
         const now = performance.now();
@@ -1658,10 +1670,11 @@
       }
 
       bindFastInput(canvas);
-      bindFastInput(app);
       bindFastInput(startOverlay);
 
       document.body.addEventListener("touchmove", (e) => {
+        if (state !== "playing") return;
+        if (shouldAllowNativeInteraction(e.target)) return;
         if (e.cancelable) e.preventDefault();
       }, { passive: false });
 
