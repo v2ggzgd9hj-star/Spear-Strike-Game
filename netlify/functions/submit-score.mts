@@ -69,18 +69,8 @@ async function writeWithRetry(store, entry) {
 
     const currentScores = current && Array.isArray(current.data) ? current.data : [];
     const nextScores = mergeScore(currentScores, entry);
-
-    if (current === null) {
-      const result = await store.setJSON(SCORES_KEY, nextScores, { onlyIfNew: true });
-      if (result.modified) return nextScores;
-      continue;
-    }
-
-    const result = await store.setJSON(SCORES_KEY, nextScores, {
-      onlyIfMatch: current.etag
-    });
-
-    if (result.modified) return nextScores;
+    await store.setJSON(SCORES_KEY, nextScores);
+    return nextScores;
   }
 
   throw new Error("Leaderboard write conflict");
