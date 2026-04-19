@@ -60,6 +60,37 @@ function mergeScore(existingScores, entry) {
   return sortScores(next).slice(0, 20);
 }
 
+function scoreListsEqual(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i];
+    const right = b[i];
+    if (
+      String(left?.name || "") !== String(right?.name || "") ||
+      Number(left?.score || 0) !== Number(right?.score || 0) ||
+      String(left?.medal || "") !== String(right?.medal || "") ||
+      String(left?.at || "") !== String(right?.at || "")
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function hasEntry(scores, entry) {
+  if (!Array.isArray(scores)) return false;
+  const key = entry.name.toLocaleLowerCase();
+  return scores.some((item) => {
+    return (
+      String(item?.name || "").toLocaleLowerCase() === key &&
+      Number(item?.score || -1) >= entry.score
+    );
+  });
+}
+
 async function writeWithRetry(store, entry) {
   for (let attempt = 0; attempt < 6; attempt += 1) {
     const current = await store.getWithMetadata(SCORES_KEY, {
@@ -69,6 +100,9 @@ async function writeWithRetry(store, entry) {
 
     const currentScores = current && Array.isArray(current.data) ? current.data : [];
     const nextScores = mergeScore(currentScores, entry);
+    if (scoreListsEqual(currentScores, nextScores)) {
+      return nextScores;
+    }
 
     if (current === null) {
       const result = await store.setJSON(SCORES_KEY, nextScores, { onlyIfNew: true });
@@ -81,6 +115,11 @@ async function writeWithRetry(store, entry) {
     });
 
     if (result.modified) return nextScores;
+
+    const latest = await store.get(SCORES_KEY, { type: "json", consistency: "strong" });
+    if (hasEntry(latest, entry)) {
+      return sortScores(latest).slice(0, 20);
+    }
   }
 
   throw new Error("Leaderboard write conflict");
