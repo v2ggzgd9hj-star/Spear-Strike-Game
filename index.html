@@ -412,6 +412,89 @@
       font-size: 13px;
     }
 
+    #gameOverOverlay .card {
+      transform-origin: center center;
+      transition: transform 140ms ease;
+    }
+
+    #gameOverOverlay .leaderboardList {
+      max-height: min(24dvh, 168px);
+    }
+
+    @media (max-height: 700px) {
+      #gameOverOverlay {
+        padding: 12px;
+      }
+
+      #gameOverOverlay .card {
+        padding: 16px 14px;
+      }
+
+      #gameOverOverlay h2 {
+        font-size: 26px;
+      }
+
+      #gameOverOverlay .sub {
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      #gameOverOverlay .statline {
+        margin: 12px 0 8px;
+        gap: 8px;
+      }
+
+      #gameOverOverlay .stat {
+        min-width: 92px;
+        padding: 8px 10px;
+      }
+
+      #gameOverOverlay .big {
+        font-size: 19px;
+      }
+
+      #gameOverOverlay .leaderboardPanel {
+        margin-top: 8px;
+        padding: 10px;
+      }
+    }
+
+    @media (max-height: 620px) {
+      #gameOverOverlay {
+        padding: 8px;
+      }
+
+      #gameOverOverlay .card {
+        padding: 14px 12px;
+      }
+
+      #gameOverOverlay h2 {
+        font-size: 23px;
+        margin-bottom: 6px;
+      }
+
+      #gameOverOverlay .eyebrow {
+        margin-bottom: 8px;
+      }
+
+      #gameOverOverlay .statline {
+        margin: 10px 0 6px;
+      }
+
+      #gameOverOverlay .small {
+        margin-bottom: 4px;
+      }
+
+      #gameOverOverlay .leaderboardPanel {
+        margin-top: 6px;
+        padding: 9px;
+      }
+
+      #gameOverOverlay .leaderboardList {
+        max-height: min(18dvh, 96px);
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -528,6 +611,7 @@
       const resultOperationText = document.getElementById("resultOperationText");
       const startOverlay = document.getElementById("startOverlay");
       const gameOverOverlay = document.getElementById("gameOverOverlay");
+      const gameOverCard = gameOverOverlay.querySelector(".card");
       const nameInput = document.getElementById("nameInput");
       const saveScoreBtn = document.getElementById("saveScoreBtn");
       const skipBtn = document.getElementById("skipBtn");
@@ -699,6 +783,18 @@
         canvas.width = Math.round(rect.width * dpr);
         canvas.height = Math.round(rect.height * dpr);
         ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+        fitGameOverCard();
+      }
+
+      function fitGameOverCard() {
+        if (!gameOverCard) return;
+        gameOverCard.style.transform = "scale(1)";
+        const overlayHeight = gameOverOverlay.clientHeight;
+        const cardHeight = gameOverCard.scrollHeight;
+        if (!overlayHeight || !cardHeight) return;
+        const availableHeight = Math.max(overlayHeight - 8, 1);
+        const scale = Math.min(1, availableHeight / cardHeight);
+        gameOverCard.style.transform = `scale(${Math.max(0.74, scale).toFixed(3)})`;
       }
 
       function syncHud() {
@@ -765,6 +861,7 @@
       function renderLeaderboard(scores) {
         if (!Array.isArray(scores) || scores.length === 0) {
           leaderboardList.innerHTML = '<li class="leaderboardEmpty">No scores yet. Be the first.</li>';
+          fitGameOverCard();
           return;
         }
 
@@ -779,6 +876,7 @@
             </li>
           `;
         }).join("");
+        fitGameOverCard();
       }
 
       async function refreshLeaderboard(message = "Loading leaderboard…") {
@@ -941,6 +1039,7 @@
         syncHud();
         showCall("Line Broken", 1.2);
         gameOverOverlay.classList.remove("hidden");
+        requestAnimationFrame(fitGameOverCard);
         hintText.textContent = "Save score or skip to continue";
         refreshLeaderboard();
         vibrate([30, 20, 30]);
