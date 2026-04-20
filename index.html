@@ -567,6 +567,11 @@
       let lastFinalScore = 0;
       let lastFinalMedal = "-";
       let leaderboardBusy = false;
+      let deathTimer = 0;
+      let deathFreezeTimer = 0;
+      let deathImpactTimer = 0;
+      let deathImpact = null;
+      let deathObstacle = null;
 
       let obstacles = [];
       let warnings = [];
@@ -942,6 +947,11 @@
         leaderboardList.innerHTML = "";
         setLeaderboardBusy(false);
         setLeaderboardListInteractive(false);
+        deathTimer = 0;
+        deathFreezeTimer = 0;
+        deathImpactTimer = 0;
+        deathImpact = null;
+        deathObstacle = null;
         syncHud();
       }
 
@@ -954,6 +964,24 @@
         hintText.textContent = "Tap anywhere to shift lane";
         showCall("Phase One • Contact", 1.2);
         phaseFlashTimer = 0.35;
+      }
+
+      function startDeathSequence(ob) {
+        if (state !== "playing") return;
+        state = "dying";
+        deathTimer = 0.24;
+        deathFreezeTimer = 0.11;
+        deathImpactTimer = 0.26;
+        deathObstacle = ob;
+        deathImpact = {
+          x: (player.x + ob.x) * 0.5,
+          y: player.y - 2
+        };
+        flashTimer = 0.30;
+        shakeTimer = 0.14;
+        player.glow = 0.34;
+        hintText.textContent = "Line broken";
+        vibrate([18, 12, 34]);
       }
 
       function endGame() {
@@ -1326,6 +1354,20 @@
         if (phaseFlashTimer > 0) phaseFlashTimer = Math.max(0, phaseFlashTimer - dt);
         if (player.glow > 0) player.glow = Math.max(0, player.glow - dt * 1.3);
 
+        if (state === "dying") {
+          if (deathFreezeTimer > 0) {
+            deathFreezeTimer = Math.max(0, deathFreezeTimer - dt);
+          }
+          if (deathImpactTimer > 0) {
+            deathImpactTimer = Math.max(0, deathImpactTimer - dt);
+          }
+          deathTimer -= dt;
+          if (deathTimer <= 0) {
+            endGame();
+          }
+          return;
+        }
+
         if (state !== "playing") return;
 
         gameTime += dt;
@@ -1382,7 +1424,7 @@
           }
 
           if (hitSpear(pBox, ob)) {
-            endGame();
+            startDeathSequence(ob);
             break;
           }
         }
@@ -1458,24 +1500,39 @@
           drawRoundedRect(t.x - 28, player.y - 13, 56, 26, 10, `rgba(183,242,166,${t.a})`);
         }
 
-        const w = player.w + player.glow * 80;
-        const h = player.h - player.glow * 18;
+        const deathProgress = state === "dying" ? 1 - Math.max(0, deathTimer) / 0.24 : 0;
+        const deathSquash = state === "dying" ? 1 + deathProgress * 0.18 : 1;
+        const deathHeight = state === "dying" ? 1 - deathProgress * 0.22 : 1;
+        const deathDrop = state === "dying" ? deathProgress * 10 : 0;
+        const deathAlpha = state === "dying" ? Math.max(0.18, 1 - deathProgress * 1.05) : 1;
+
+        const w = (player.w + player.glow * 80) * deathSquash;
+        const h = (player.h - player.glow * 18) * deathHeight;
         const x = player.x - w / 2;
-        const y = player.y - h / 2;
+        const y = player.y - h / 2 + deathDrop;
 
-        ctx.shadowColor = `rgba(183,242,166,${0.35 + player.glow})`;
+        ctx.shadowColor = `rgba(183,242,166,${(0.35 + player.glow) * deathAlpha})`;
         ctx.shadowBlur = 18;
-        drawRoundedRect(x, y, w, h, 11, "#b7f2a6");
+        drawRoundedRect(x, y, w, h, 11, `rgba(183,242,166,${deathAlpha})`);
         ctx.shadowBlur = 0;
-        drawRoundedRect(x + 9, y + 5, w - 18, 6, 3, "rgba(255,255,255,0.18)");
+        drawRoundedRect(x + 9, y + 5, w - 18, 6, 3, `rgba(255,255,255,${0.18 * deathAlpha})`);
 
-        ctx.fillStyle = "rgba(183,242,166,0.12)";
+        ctx.fillStyle = `rgba(183,242,166,${0.12 * deathAlpha})`;
         ctx.beginPath();
-        ctx.moveTo(player.x, player.y - 30);
-        ctx.lineTo(player.x - 18, player.y - 7);
-        ctx.lineTo(player.x + 18, player.y - 7);
+        ctx.moveTo(player.x, player.y - 30 + deathDrop);
+        ctx.lineTo(player.x - 18, player.y - 7 + deathDrop);
+        ctx.lineTo(player.x + 18, player.y - 7 + deathDrop);
         ctx.closePath();
         ctx.fill();
+
+        if (state === "dying") {
+          ctx.strokeStyle = `rgba(12,20,12,${0.52 + deathProgress * 0.22})`;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(player.x - 18, player.y - 11 + deathDrop);
+          ctx.lineTo(player.x + 17, player.y + 11 + deathDrop);
+          ctx.stroke();
+        }
       }
 
       function drawWarningMarker(warn) {
@@ -1533,13 +1590,14 @@
         const scale = Math.max(0.86, Math.min(1.17, 0.86 + ob.y / H * 0.24));
         const w = ob.w * scale;
         const h = ob.h * scale;
+        const isKiller = state === "dying" && deathObstacle === ob;
 
         ctx.save();
         ctx.translate(ob.x, ob.y);
         ctx.rotate(Math.PI + ob.rot);
 
-        ctx.shadowColor = `rgba(183,242,166,${0.12 + ob.glow})`;
-        ctx.shadowBlur = ob.kind === "fast" ? 18 : 14;
+        ctx.shadowColor = `rgba(183,242,166,${0.12 + ob.glow + (isKiller ? 0.18 : 0)})`;
+        ctx.shadowBlur = isKiller ? 24 : (ob.kind === "fast" ? 18 : 14);
 
         ctx.beginPath();
         ctx.moveTo(0, -h * 0.50);
@@ -1627,7 +1685,7 @@
       }
 
       function drawPhaseStamp() {
-        if (state !== "playing") return;
+        if (state !== "playing" && state !== "dying") return;
         const phase = currentPhase();
         ctx.fillStyle = "rgba(235,245,235,0.20)";
         ctx.font = "700 12px system-ui, sans-serif";
@@ -1642,6 +1700,36 @@
         ctx.fillRect(0, 0, W, 96);
       }
 
+      function drawDeathImpact() {
+        if (state !== "dying" || !deathImpact) return;
+
+        const progress = 1 - Math.max(0, deathImpactTimer) / 0.26;
+        const flashAlpha = Math.max(0, 0.34 - progress * 0.28);
+        const ringAlpha = Math.max(0, 0.40 - progress * 0.34);
+        const radius = 10 + progress * 34;
+
+        ctx.fillStyle = `rgba(0, 0, 0, ${0.14 + progress * 0.10})`;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.strokeStyle = `rgba(224,255,214,${ringAlpha})`;
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.arc(deathImpact.x, deathImpact.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = `rgba(224,255,214,${flashAlpha})`;
+        ctx.beginPath();
+        ctx.arc(deathImpact.x, deathImpact.y, 12 + progress * 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(224,255,214,${Math.max(0, flashAlpha * 0.9)})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(deathImpact.x - 20 - progress * 8, deathImpact.y - 10);
+        ctx.lineTo(deathImpact.x + 18 + progress * 10, deathImpact.y + 10);
+        ctx.stroke();
+      }
+
       function drawFlash() {
         if (flashTimer <= 0) return;
         ctx.fillStyle = `rgba(210,255,185,${Math.min(0.26, flashTimer * 1.2)})`;
@@ -1654,6 +1742,7 @@
         drawObstacles();
         drawBursts();
         drawPlayer();
+        drawDeathImpact();
         drawIdleGuides();
         drawPhaseStamp();
         drawPhaseFlash();
