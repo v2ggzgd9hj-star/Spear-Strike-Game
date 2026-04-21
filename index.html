@@ -204,7 +204,18 @@
       max-height: min(86dvh, 760px);
       display: flex;
       flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      scrollbar-width: thin;
+    }
+
+    #gameOverOverlay .card.isLocked {
       overflow: hidden;
+      pointer-events: none;
+      touch-action: none;
     }
 
     .eyebrow {
@@ -294,10 +305,9 @@
     }
 
     #gameOverOverlay .leaderboardPanel {
-      display: flex;
-      flex-direction: column;
-      flex: 1 1 auto;
-      min-height: 0;
+      display: block;
+      flex: 0 0 auto;
+      min-height: auto;
     }
 
     .panelTitle {
@@ -379,22 +389,16 @@
     }
 
     .leaderboardScroll {
+      overflow: visible;
+      max-height: none;
       min-height: 0;
-      max-height: min(280px, 34vh);
-      overflow-y: auto;
-      overflow-x: hidden;
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
-      touch-action: pan-y;
-      scrollbar-width: thin;
       pointer-events: auto;
-      border-radius: 12px;
     }
 
     .leaderboardScroll.isLocked {
-      overflow: hidden;
-      pointer-events: none;
-      touch-action: none;
+      overflow: visible;
+      pointer-events: auto;
+      touch-action: auto;
     }
 
     .leaderboardList {
@@ -564,6 +568,7 @@
       const resultOperationText = document.getElementById("resultOperationText");
       const startOverlay = document.getElementById("startOverlay");
       const gameOverOverlay = document.getElementById("gameOverOverlay");
+      const gameOverCard = gameOverOverlay.querySelector(".card");
       const nameInput = document.getElementById("nameInput");
       const saveScoreBtn = document.getElementById("saveScoreBtn");
       const skipBtn = document.getElementById("skipBtn");
@@ -810,10 +815,11 @@
       }
 
       function resetLeaderboardScroll() {
-        leaderboardScroll.scrollTop = 0;
+        gameOverCard.scrollTop = 0;
       }
 
       function setLeaderboardListInteractive(isInteractive) {
+        gameOverCard.classList.toggle("isLocked", !isInteractive);
         leaderboardScroll.classList.toggle("isLocked", !isInteractive);
         if (!isInteractive) {
           resetLeaderboardScroll();
@@ -1083,7 +1089,7 @@
         return Boolean(
           target &&
           target.closest &&
-          target.closest(".leaderboardPanel, .leaderboardScroll, .leaderboardList, .nameInput, .actionBtn")
+          gameOverCard.contains(target)
         );
       }
 
@@ -1826,7 +1832,7 @@
           event.stopPropagation();
         });
 
-        leaderboardScroll.addEventListener(eventName, (event) => {
+        gameOverCard.addEventListener(eventName, (event) => {
           event.stopPropagation();
         });
       });
