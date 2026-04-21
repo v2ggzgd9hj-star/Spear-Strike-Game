@@ -204,18 +204,40 @@
       max-height: min(86dvh, 760px);
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+    }
+
+    #gameOverOverlay .card.isLocked {
+      pointer-events: none;
+    }
+
+    .gameOverBody {
+      flex: 1 1 auto;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
       scrollbar-width: thin;
+      padding-right: 2px;
     }
 
-    #gameOverOverlay .card.isLocked {
+    .gameOverBody.isLocked {
       overflow: hidden;
       pointer-events: none;
       touch-action: none;
+    }
+
+    .gameOverFooter {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: linear-gradient(to bottom, rgba(10, 15, 11, 0.04), rgba(10, 15, 11, 0.18));
+      pointer-events: auto;
     }
 
     .eyebrow {
@@ -488,48 +510,50 @@
 
     <div class="overlay hidden" id="gameOverOverlay">
       <div class="card">
-        <div class="eyebrow" id="resultOperationText">Operation Cold Spear</div>
-        <h2>Line Broken</h2>
-        <p class="sub">A hostile mark reached your lane.</p>
-        <div class="statline">
-          <div class="stat">
-            <div class="small">Score</div>
-            <div class="big" id="finalScore">0</div>
+        <div id="gameOverBody" class="gameOverBody">
+          <div class="eyebrow" id="resultOperationText">Operation Cold Spear</div>
+          <h2>Line Broken</h2>
+          <p class="sub">A hostile mark reached your lane.</p>
+          <div class="statline">
+            <div class="stat">
+              <div class="small">Score</div>
+              <div class="big" id="finalScore">0</div>
+            </div>
+            <div class="stat">
+              <div class="small">Best</div>
+              <div class="big" id="finalBest">0</div>
+            </div>
+            <div class="stat">
+              <div class="small">Medal</div>
+              <div class="big" id="finalMedal">-</div>
+            </div>
           </div>
-          <div class="stat">
-            <div class="small">Best</div>
-            <div class="big" id="finalBest">0</div>
-          </div>
-          <div class="stat">
-            <div class="small">Medal</div>
-            <div class="big" id="finalMedal">-</div>
+
+          <div class="leaderboardPanel">
+            <div class="panelTitle">Leaderboard</div>
+
+            <div class="fieldRow">
+              <input
+                id="nameInput"
+                class="nameInput"
+                type="text"
+                maxlength="16"
+                placeholder="Your name"
+                autocomplete="nickname"
+                spellcheck="false"
+              />
+            </div>
+
+            <div id="leaderboardStatus" class="leaderboardStatus">Loading leaderboard…</div>
+            <div id="leaderboardScroll" class="leaderboardScroll isLocked">
+              <ol id="leaderboardList" class="leaderboardList"></ol>
+            </div>
           </div>
         </div>
 
-        <div class="leaderboardPanel">
-          <div class="panelTitle">Leaderboard</div>
-
-          <div class="fieldRow">
-            <input
-              id="nameInput"
-              class="nameInput"
-              type="text"
-              maxlength="16"
-              placeholder="Your name"
-              autocomplete="nickname"
-              spellcheck="false"
-            />
-          </div>
-
-          <div class="actionRow">
-            <button id="saveScoreBtn" class="actionBtn actionBtnPrimary" type="button">Save score</button>
-            <button id="skipBtn" class="actionBtn" type="button">Skip</button>
-          </div>
-
-          <div id="leaderboardStatus" class="leaderboardStatus">Loading leaderboard…</div>
-          <div id="leaderboardScroll" class="leaderboardScroll isLocked">
-            <ol id="leaderboardList" class="leaderboardList"></ol>
-          </div>
+        <div class="gameOverFooter">
+          <button id="saveScoreBtn" class="actionBtn actionBtnPrimary" type="button">Save score</button>
+          <button id="skipBtn" class="actionBtn" type="button">Play again</button>
         </div>
       </div>
     </div>
@@ -569,6 +593,7 @@
       const startOverlay = document.getElementById("startOverlay");
       const gameOverOverlay = document.getElementById("gameOverOverlay");
       const gameOverCard = gameOverOverlay.querySelector(".card");
+      const gameOverBody = document.getElementById("gameOverBody");
       const nameInput = document.getElementById("nameInput");
       const saveScoreBtn = document.getElementById("saveScoreBtn");
       const skipBtn = document.getElementById("skipBtn");
@@ -815,11 +840,12 @@
       }
 
       function resetLeaderboardScroll() {
-        gameOverCard.scrollTop = 0;
+        gameOverBody.scrollTop = 0;
       }
 
       function setLeaderboardListInteractive(isInteractive) {
         gameOverCard.classList.toggle("isLocked", !isInteractive);
+        gameOverBody.classList.toggle("isLocked", !isInteractive);
         leaderboardScroll.classList.toggle("isLocked", !isInteractive);
         if (!isInteractive) {
           resetLeaderboardScroll();
