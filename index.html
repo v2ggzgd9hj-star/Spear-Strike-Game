@@ -200,6 +200,13 @@
       backdrop-filter: blur(10px);
     }
 
+    #gameOverOverlay .card {
+      max-height: min(86dvh, 760px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     .eyebrow {
       color: var(--accent);
       text-transform: uppercase;
@@ -286,6 +293,13 @@
       text-align: left;
     }
 
+    #gameOverOverlay .leaderboardPanel {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
     .panelTitle {
       color: var(--accent);
       font-size: 12px;
@@ -364,13 +378,8 @@
       margin-bottom: 8px;
     }
 
-    .leaderboardList {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    .leaderboardScroll {
+      min-height: 0;
       max-height: min(280px, 34vh);
       overflow-y: auto;
       overflow-x: hidden;
@@ -378,12 +387,23 @@
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
       scrollbar-width: thin;
+      pointer-events: auto;
+      border-radius: 12px;
     }
 
-    .leaderboardList.isLocked {
+    .leaderboardScroll.isLocked {
       overflow: hidden;
       pointer-events: none;
       touch-action: none;
+    }
+
+    .leaderboardList {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .leaderboardEntry {
@@ -503,7 +523,9 @@
           </div>
 
           <div id="leaderboardStatus" class="leaderboardStatus">Loading leaderboard…</div>
-          <ol id="leaderboardList" class="leaderboardList isLocked"></ol>
+          <div id="leaderboardScroll" class="leaderboardScroll isLocked">
+            <ol id="leaderboardList" class="leaderboardList"></ol>
+          </div>
         </div>
       </div>
     </div>
@@ -547,6 +569,7 @@
       const skipBtn = document.getElementById("skipBtn");
       const leaderboardStatus = document.getElementById("leaderboardStatus");
       const leaderboardList = document.getElementById("leaderboardList");
+      const leaderboardScroll = document.getElementById("leaderboardScroll");
 
       let dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
       let state = "idle";
@@ -787,11 +810,11 @@
       }
 
       function resetLeaderboardScroll() {
-        leaderboardList.scrollTop = 0;
+        leaderboardScroll.scrollTop = 0;
       }
 
       function setLeaderboardListInteractive(isInteractive) {
-        leaderboardList.classList.toggle("isLocked", !isInteractive);
+        leaderboardScroll.classList.toggle("isLocked", !isInteractive);
         if (!isInteractive) {
           resetLeaderboardScroll();
         }
@@ -1060,7 +1083,7 @@
         return Boolean(
           target &&
           target.closest &&
-          target.closest(".leaderboardPanel, .leaderboardList, .nameInput, .actionBtn")
+          target.closest(".leaderboardPanel, .leaderboardScroll, .leaderboardList, .nameInput, .actionBtn")
         );
       }
 
@@ -1800,6 +1823,10 @@
         });
 
         skipBtn.addEventListener(eventName, (event) => {
+          event.stopPropagation();
+        });
+
+        leaderboardScroll.addEventListener(eventName, (event) => {
           event.stopPropagation();
         });
       });
