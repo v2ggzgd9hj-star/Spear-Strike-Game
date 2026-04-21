@@ -179,11 +179,13 @@
       place-items: center;
       padding: 20px;
       background: linear-gradient(rgba(4, 8, 5, 0.48), rgba(4, 8, 5, 0.78));
-      transition: opacity 140ms ease;
+      transition: opacity 140ms ease, visibility 140ms ease;
+      visibility: visible;
     }
 
     .overlay.hidden {
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
     }
 
@@ -795,6 +797,25 @@
         }
       }
 
+      function setGameOverUiEnabled(enabled) {
+        nameInput.disabled = !enabled;
+        saveScoreBtn.disabled = !enabled;
+        skipBtn.disabled = !enabled;
+
+        nameInput.tabIndex = enabled ? 0 : -1;
+        saveScoreBtn.tabIndex = enabled ? 0 : -1;
+        skipBtn.tabIndex = enabled ? 0 : -1;
+
+        setLeaderboardListInteractive(enabled);
+
+        if (!enabled) {
+          nameInput.blur();
+          if (document.activeElement && typeof document.activeElement.blur === "function") {
+            document.activeElement.blur();
+          }
+        }
+      }
+
       function renderLeaderboard(scores) {
         if (!Array.isArray(scores) || scores.length === 0) {
           leaderboardList.innerHTML = '<li class="leaderboardEmpty">No current-season scores yet. Be the first.</li>';
@@ -946,7 +967,7 @@
         setLeaderboardStatus("Loading leaderboard…");
         leaderboardList.innerHTML = "";
         setLeaderboardBusy(false);
-        setLeaderboardListInteractive(false);
+        setGameOverUiEnabled(false);
         deathTimer = 0;
         deathFreezeTimer = 0;
         deathImpactTimer = 0;
@@ -1005,7 +1026,7 @@
         syncHud();
         showCall("Line Broken", 1.2);
         gameOverOverlay.classList.remove("hidden");
-        setLeaderboardListInteractive(true);
+        setGameOverUiEnabled(true);
         resetLeaderboardScroll();
         hintText.textContent = "Save score or skip to continue";
         refreshLeaderboard();
@@ -1034,6 +1055,8 @@
       }
 
       function shouldAllowNativeInteraction(target) {
+        if (gameOverOverlay.classList.contains("hidden")) return false;
+
         return Boolean(
           target &&
           target.closest &&
@@ -1811,6 +1834,7 @@
       resizeCanvas();
       syncHud();
       refreshLeaderboard();
+      setGameOverUiEnabled(false);
       render();
       requestAnimationFrame(loop);
     })();
