@@ -6,6 +6,18 @@ const SCORES_KEY = "leaderboard/scores";
 const DEFAULT_VERSION = "season-2";
 const MAX_SCORES = 20;
 
+type ScoreEntry = {
+  name?: string;
+  score?: number;
+  medal?: string;
+  version?: string;
+  runId?: string;
+  runTimeSeconds?: number;
+  phaseIndex?: number;
+  danger?: number;
+  at?: string;
+};
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -22,7 +34,7 @@ function sanitizeVersion(value: unknown) {
     .slice(0, 32) || DEFAULT_VERSION;
 }
 
-function sortScores(scores: Array<{ score?: number; at?: string }>) {
+function sortScores(scores: ScoreEntry[]) {
   return [...scores].sort((a, b) => {
     if (Number(b.score || 0) !== Number(a.score || 0)) {
       return Number(b.score || 0) - Number(a.score || 0);
@@ -32,21 +44,31 @@ function sortScores(scores: Array<{ score?: number; at?: string }>) {
 }
 
 export default async function handler(req: Request) {
+  const url = new URL(req.url);
+  const version = sanitizeVersion(url.searchParams.get("version"));
+
   try {
-    const url = new URL(req.url);
-    const version = sanitizeVersion(url.searchParams.get("version"));
     const store = getStore({ name: STORE_NAME, consistency: "strong" });
     const scores = await store.get(SCORES_KEY, { type: "json", consistency: "strong" });
     const filtered = Array.isArray(scores)
-      ? scores.filter((entry: any) => (entry?.version || "legacy") === version)
+      ? scores.filter((entry: ScoreEntry) => (entry?.version || "legacy") === version)
       : [];
 
+    console.info("leaderboard.read", {
+      version,
+      count: filtered.length
+    });
+
     return json({
+      ok: true,
       version,
       scores: sortScores(filtered).slice(0, MAX_SCORES)
     });
   } catch (error) {
-    console.error("leaderboard read failed", error);
+    console.error("leaderboard.read_failed", {
+      version,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return json({ error: "Could not load leaderboard" }, 500);
   }
 }

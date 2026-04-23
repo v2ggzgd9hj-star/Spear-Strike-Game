@@ -2,10 +2,23 @@ Spear Line with Netlify leaderboard
 
 What is included
 - index.html: the game
+- app.js: generated classic browser bundle for direct-open play on PC
+- styles.css: extracted UI styles
+- shared/run-result.js: shared run medal and score plausibility rules
+- src/main.js: browser entrypoint and DOM wiring
+- src/config.js: shared gameplay and leaderboard constants
+- src/game.js: gameplay, spawning, collisions, and rendering
+- src/ui.js: HUD, overlays, and leaderboard panel behavior
+- src/leaderboard.js: local storage helpers and leaderboard API calls
 - netlify/functions/leaderboard.mts: reads the shared leaderboard
 - netlify/functions/submit-score.mts: saves a score
 - netlify.toml: Netlify config
 - package.json: dependencies for Functions + Blobs
+
+Local workflow
+- Frontend-only smoke test: you can open `index.html` directly on PC for the local game-only version, or serve the repo root with any simple static server.
+- After editing files under `shared/` or `src/`, run `npm run build:app` to regenerate `app.js`.
+- Full leaderboard test: run the site with Netlify local dev so `/api/leaderboard` and `/api/submit-score` are available.
 
 Deploy the right way
 1. Put this folder in a GitHub repository.
